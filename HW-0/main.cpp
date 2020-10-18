@@ -1,48 +1,29 @@
-#include<cmath>
-#include<eigen3/Eigen/Core>
-#include<eigen3/Eigen/Dense>
-#include<iostream>
+#include <iostream>
+#include <cmath>
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Dense>
 
-int main(){
+using namespace std;
+using namespace Eigen;
 
-    // Basic Example of cpp
-    std::cout << "Example of cpp \n";
-    float a = 1.0, b = 2.0;
-    std::cout << a << std::endl;
-    std::cout << a/b << std::endl;
-    std::cout << std::sqrt(b) << std::endl;
-    std::cout << std::acos(-1) << std::endl;
-    std::cout << std::sin(30.0/180.0*acos(-1)) << std::endl;
+void print_point(Vector3f p) {
+    printf("(%f, %f)\n", p(0) / p(2), p(1) / p(2));
+}
 
-    // Example of vector
-    std::cout << "Example of vector \n";
-    // vector definition
-    Eigen::Vector3f v(1.0f,2.0f,3.0f);
-    Eigen::Vector3f w(1.0f,0.0f,0.0f);
-    // vector output
-    std::cout << "Example of output \n";
-    std::cout << v << std::endl;
-    // vector add
-    std::cout << "Example of add \n";
-    std::cout << v + w << std::endl;
-    // vector scalar multiply
-    std::cout << "Example of scalar multiply \n";
-    std::cout << v * 3.0f << std::endl;
-    std::cout << 2.0f * v << std::endl;
-
-    // Example of matrix
-    std::cout << "Example of matrix \n";
-    // matrix definition
-    Eigen::Matrix3f i,j;
-    i << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0;
-    j << 2.0, 3.0, 1.0, 4.0, 6.0, 5.0, 9.0, 7.0, 8.0;
-    // matrix output
-    std::cout << "Example of output \n";
-    std::cout << i << std::endl;
-    // matrix add i + j
-    // matrix scalar multiply i * 2.0
-    // matrix multiply i * j
-    // matrix multiply vector i * v
-
+int main() {
+    // P = (2, 1)
+    Vector3f P(2, 1, 1);
+    print_point(P);
+    // anti-clock-rotate 45 degree
+    Matrix3f R1;
+    double theta = 45.0 / 180 * M_PI;
+    R1 << cos(theta), -sin(theta), 0, sin(theta), cos(theta), 0, 0, 0, 1;
+    P = R1 * P;
+    print_point(P);
+    // Trans move (1, 2)
+    Matrix3f M1;
+    M1 << 1, 0, 1, 0, 1, 2, 0, 0, 1;
+    P = M1 * P;
+    print_point(P);
     return 0;
 }
