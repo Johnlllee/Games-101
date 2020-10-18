@@ -32,6 +32,14 @@ make -j4
 
 ![Rotaion on axis x](x.gif)
 
+```
+./Rasterizer -axis y
+```
+
 ![Rotaion on axis y](y.gif)
+
+```
+./Rasterizer -axis z
+```
 
 ![Rotaion on axis z](z.gif)
