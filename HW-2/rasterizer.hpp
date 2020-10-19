@@ -66,11 +66,12 @@ namespace rst
         void set_view(const Eigen::Matrix4f& v);
         void set_projection(const Eigen::Matrix4f& p);
 
+        void set_ssaa_pixel(const Eigen::Vector3f& point, const Eigen::Vector3f& color);
         void set_pixel(const Eigen::Vector3f& point, const Eigen::Vector3f& color);
 
         void clear(Buffers buff);
 
-        void draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf_id col_buffer, Primitive type);
+        void draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf_id col_buffer, Primitive type, bool ssaa);
 
         std::vector<Eigen::Vector3f>& frame_buffer() { return frame_buf; }
 
@@ -78,6 +79,7 @@ namespace rst
         void draw_line(Eigen::Vector3f begin, Eigen::Vector3f end);
 
         void rasterize_triangle(const Triangle& t);
+        void rasterize_ssaa_triangle(const Triangle& t);
 
         // VERTEX SHADER -> MVP -> Clipping -> /.W -> VIEWPORT -> DRAWLINE/DRAWTRI -> FRAGSHADER
 
@@ -90,9 +92,10 @@ namespace rst
         std::map<int, std::vector<Eigen::Vector3i>> ind_buf;
         std::map<int, std::vector<Eigen::Vector3f>> col_buf;
 
-        std::vector<Eigen::Vector3f> frame_buf;
+        std::vector<Eigen::Vector3f> frame_buf, ssaa_frame_buf;
 
-        std::vector<float> depth_buf;
+        std::vector<float> depth_buf, ssaa_depth_buf;
+        int get_ssaa_index(int x, int y);
         int get_index(int x, int y);
 
         int width, height;
