@@ -9,6 +9,10 @@
 # Faces: 5856
 #
 ####
+# v 几何体顶点 (Geometric vertices)
+# vt 贴图坐标点 (Texture vertices)
+# vn 顶点法线 (Vertex normals)
+# f 面 (Face)
 vn 0.713667 0.093012 -0.694283
 vt 0.854030 0.663650
 v 0.348799 -0.334989 -0.083233

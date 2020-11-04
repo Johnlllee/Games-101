@@ -51,7 +51,7 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float z
     float n = -zNear;
     float f = -zFar;
 
-    float top = std::abs(n) * std::tan(eye_fov / 180.0 * MY_PI);
+    float top = std::abs(n) * std::tan(eye_fov / 180.0 * MY_PI / 2);
     float bottom = -top;
     float right = aspect_ratio * top;
     float left = -right;
@@ -95,7 +95,7 @@ int main(int argc, const char** argv)
 
     rst::rasterizer r(700, 700);
 
-    Eigen::Vector3f eye_pos = {0,0,3};
+    Eigen::Vector3f eye_pos = {0,0,5};
 
 
     std::vector<Eigen::Vector3f> pos

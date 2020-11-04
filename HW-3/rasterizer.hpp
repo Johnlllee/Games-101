@@ -75,6 +75,7 @@ namespace rst
         void set_vertex_shader(std::function<Eigen::Vector3f(vertex_shader_payload)> vert_shader);
         void set_fragment_shader(std::function<Eigen::Vector3f(fragment_shader_payload)> frag_shader);
 
+        void set_ssaa_pixel(const Eigen::Vector2i & point, const Eigen::Vector3f& color);
         void set_pixel(const Vector2i &point, const Eigen::Vector3f &color);
 
         void clear(Buffers buff);
@@ -88,7 +89,7 @@ namespace rst
         void draw_line(Eigen::Vector3f begin, Eigen::Vector3f end);
 
         void rasterize_triangle(const Triangle& t, const std::array<Eigen::Vector3f, 3>& world_pos);
-
+        void rasterize_ssaa_triangle(const Triangle& t, const std::array<Eigen::Vector3f, 3>& world_pos);
         // VERTEX SHADER -> MVP -> Clipping -> /.W -> VIEWPORT -> DRAWLINE/DRAWTRI -> FRAGSHADER
 
     private:
@@ -108,8 +109,9 @@ namespace rst
         std::function<Eigen::Vector3f(fragment_shader_payload)> fragment_shader;
         std::function<Eigen::Vector3f(vertex_shader_payload)> vertex_shader;
 
-        std::vector<Eigen::Vector3f> frame_buf;
-        std::vector<float> depth_buf;
+        std::vector<Eigen::Vector3f> frame_buf, ssaa_frame_buf;
+        std::vector<float> depth_buf, ssaa_depth_buf;
+        int get_ssaa_index(int x, int y);
         int get_index(int x, int y);
 
         int width, height;
