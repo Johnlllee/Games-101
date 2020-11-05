@@ -70,8 +70,6 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float z
     projection = orthographic * perspective;
 
     return projection;
-
-    return projection;
 }
 
 int main(int argc, const char** argv)
