@@ -149,7 +149,7 @@ auto to_vec4(const Eigen::Vector3f& v3, float w = 1.0f)
     return Vector4f(v3.x(), v3.y(), v3.z(), w);
 }
 
-static bool insideTriangle(int x, int y, const Vector4f* _v){
+static bool insideTriangle(float x, float y, const Vector4f* _v){
     Vector3f v[3];
     for(int i=0;i<3;i++)
         v[i] = {_v[i].x(),_v[i].y(), 1.0};
