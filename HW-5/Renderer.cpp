@@ -1,8 +1,10 @@
+#include <chrono>
 #include <fstream>
 #include "Vector.hpp"
 #include "Renderer.hpp"
 #include "Scene.hpp"
 #include <optional>
+#include <opencv2/opencv.hpp>
 
 inline float deg2rad(const float &deg)
 { return deg * M_PI/180.0; }
@@ -212,8 +214,12 @@ void Renderer::Render(const Scene& scene)
 {
     std::vector<Vector3f> framebuffer(scene.width * scene.height);
 
-    float scale = std::tan(deg2rad(scene.fov * 0.5f));
-    float imageAspectRatio = scene.width / (float)scene.height;
+    // float scale = std::tan(deg2rad(scene.fov * 0.5f)); 
+    // float imageAspectRatio = scene.width / (float)scene.height;
+
+    cv::Mat window = cv::Mat(scene.height, scene.width, CV_8UC3, cv::Scalar(0));
+    cv::namedWindow("Ray Tracing", cv::WINDOW_AUTOSIZE);
+    // cv::cvtColor(window, window, cv::COLOR_BGR2RGB);
 
     // Use this variable as the eye position to start your rays.
     Vector3f eye_pos(0);
@@ -223,15 +229,23 @@ void Renderer::Render(const Scene& scene)
         for (int i = 0; i < scene.width; ++i)
         {
             // generate primary ray direction
-            float x;
-            float y;
+            float x = - scene.width / 2.f + i;
+            float y = scene.height / 2.f - j;
             // TODO: Find the x and y positions of the current pixel to get the direction
             // vector that passes through it.
             // Also, don't forget to multiply both of them with the variable *scale*, and
             // x (horizontal) variable with the *imageAspectRatio*            
-
+            x /= (scene.height / 2.f);
+            y /= (scene.height / 2.f);
             Vector3f dir = Vector3f(x, y, -1); // Don't forget to normalize this direction!
-            framebuffer[m++] = castRay(eye_pos, dir, scene, 0);
+            dir = normalize(dir);
+            Vector3f color = castRay(eye_pos, dir, scene, 0);
+
+            window.at<cv::Vec3b>(j, i)[0] = (uchar)(255 * clamp(0, 1, color.x));
+            window.at<cv::Vec3b>(j, i)[1] = (uchar)(255 * clamp(0, 1, color.y));
+            window.at<cv::Vec3b>(j, i)[2] = (uchar)(255 * clamp(0, 1, color.z));
+
+            framebuffer[m++] = color;
         }
         UpdateProgress(j / (float)scene.height);
     }
@@ -246,5 +260,91 @@ void Renderer::Render(const Scene& scene)
         color[2] = (char)(255 * clamp(0, 1, framebuffer[i].z));
         fwrite(color, 1, 3, fp);
     }
-    fclose(fp);    
+    fclose(fp);
+
+    cv::cvtColor(window, window, cv::COLOR_BGR2RGB);
+    cv::imshow("Ray Tracing", window);
+    cv::imwrite("binary.png", window);
+    int key = cv::waitKey(0);
+    cv::destroyWindow("Ray Tracing");
+}
+
+
+int Renderer::get_ssaa_index(int x, int y, int width)
+{
+    return y * width * 2 + x;
+}
+
+
+void Renderer::SSAARender(const Scene& scene)
+{
+    std::vector<Vector3f> framebuffer(scene.width * scene.height);
+    std::vector<Vector3f> ssaaframebuffer(scene.width * 2 * scene.height * 2);
+
+    // float scale = std::tan(deg2rad(scene.fov * 0.5f)); 
+    // float imageAspectRatio = scene.width / (float)scene.height;
+
+    // Use this variable as the eye position to start your rays.
+    Vector3f eye_pos(0);
+    int m = 0;
+    for(int j = 0; j < (scene.height * 2); ++j) {
+        for (int i = 0; i < (scene.width * 2); ++i) {
+            float x = - scene.width / 2.f + i / 2.f;
+            float y = scene.height / 2.f - j / 2.f;
+            x /= (scene.height / 2.f);
+            y /= (scene.height / 2.f);
+            Vector3f dir = Vector3f(x, y, -1); // Don't forget to normalize this direction!
+            dir = normalize(dir);
+            ssaaframebuffer[m++] = castRay(eye_pos, dir, scene, 0);
+        }
+        UpdateProgress(j / ((float)scene.height * 2));
+    }
+    std::cout << "SSAA ok." << std::endl;
+
+    cv::Mat window = cv::Mat(scene.height, scene.width, CV_8UC3, cv::Scalar(0));
+    cv::namedWindow("Ray Tracing SSAA", cv::WINDOW_AUTOSIZE);
+
+    m = 0;
+    for (int j = 0; j < scene.height; ++j) {
+        for (int i = 0; i < scene.width; ++i) {
+            int ssaa_bottom = j * 2;
+            int ssaa_top = j * 2 + 1;
+            int ssaa_left = i * 2;
+            int ssaa_right = i * 2 + 1;
+            Vector3f c0, c1, c2, c3;
+            c0 = ssaaframebuffer[get_ssaa_index(ssaa_left, ssaa_bottom, scene.width)];
+            c1 = ssaaframebuffer[get_ssaa_index(ssaa_right, ssaa_bottom, scene.width)];
+            c2 = ssaaframebuffer[get_ssaa_index(ssaa_left, ssaa_top, scene.width)];
+            c3 = ssaaframebuffer[get_ssaa_index(ssaa_right, ssaa_top, scene.width)];
+            float r = (c0.x + c1.x + c2.x + c3.x) / 4.0f;
+            float g = (c0.y + c1.y + c2.y + c3.y) / 4.0f;
+            float b = (c0.z + c1.z + c2.z + c3.z) / 4.0f;
+            window.at<cv::Vec3b>(j, i)[0] = (uchar)(255 * clamp(0, 1, r));
+            window.at<cv::Vec3b>(j, i)[1] = (uchar)(255 * clamp(0, 1, g));
+            window.at<cv::Vec3b>(j, i)[2] = (uchar)(255 * clamp(0, 1, b));
+            Vector3f ssaa_color(r, g, b);
+            framebuffer[m++] = ssaa_color;
+        }
+        UpdateProgress(j / (float)scene.height);
+    }
+
+    std::cout << "All ok." << std::endl;
+
+    // save framebuffer to file
+    FILE* fp = fopen("binary-ssaa.ppm", "wb");
+    (void)fprintf(fp, "P6\n%d %d\n255\n", scene.width, scene.height);
+    for (auto i = 0; i < scene.height * scene.width; ++i) {
+        static unsigned char color[3];
+        color[0] = (char)(255 * clamp(0, 1, framebuffer[i].x));
+        color[1] = (char)(255 * clamp(0, 1, framebuffer[i].y));
+        color[2] = (char)(255 * clamp(0, 1, framebuffer[i].z));
+        fwrite(color, 1, 3, fp);
+    }
+    fclose(fp);
+
+    cv::cvtColor(window, window, cv::COLOR_BGR2RGB);
+    cv::imshow("Ray Tracing SSAA", window);
+    cv::imwrite("binary-ssaa.png", window);
+    int key = cv::waitKey(0);
+    cv::destroyWindow("Ray Tracing SSAA");
 }
