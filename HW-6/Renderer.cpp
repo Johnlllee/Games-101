@@ -5,7 +5,7 @@
 #include <fstream>
 #include "Scene.hpp"
 #include "Renderer.hpp"
-
+#include <opencv2/opencv.hpp>
 
 inline float deg2rad(const float& deg) { return deg * M_PI / 180.0; }
 
@@ -21,6 +21,10 @@ void Renderer::Render(const Scene& scene)
     float scale = tan(deg2rad(scene.fov * 0.5));
     float imageAspectRatio = scene.width / (float)scene.height;
     Vector3f eye_pos(-1, 5, 10);
+
+    cv::Mat window = cv::Mat(scene.height, scene.width, CV_8UC3, cv::Scalar(0));
+    cv::namedWindow("Ray Tracing", cv::WINDOW_AUTOSIZE);
+
     int m = 0;
     for (uint32_t j = 0; j < scene.height; ++j) {
         for (uint32_t i = 0; i < scene.width; ++i) {
@@ -35,7 +39,16 @@ void Renderer::Render(const Scene& scene)
             // *scale*, and x (horizontal) variable with the *imageAspectRatio*
 
             // Don't forget to normalize this direction!
+            Vector3f dir = Vector3f(x, y, -1); // Don't forget to normalize this direction!
+            dir = normalize(dir);
+            Ray r = Ray(eye_pos, dir);
+            Vector3f color = scene.castRay(r, 0);
 
+            window.at<cv::Vec3b>(j, i)[0] = (uchar)(255 * clamp(0, 1, color.x));
+            window.at<cv::Vec3b>(j, i)[1] = (uchar)(255 * clamp(0, 1, color.y));
+            window.at<cv::Vec3b>(j, i)[2] = (uchar)(255 * clamp(0, 1, color.z));
+
+            framebuffer[m++] = color;
         }
         UpdateProgress(j / (float)scene.height);
     }
@@ -51,5 +64,8 @@ void Renderer::Render(const Scene& scene)
         color[2] = (unsigned char)(255 * clamp(0, 1, framebuffer[i].z));
         fwrite(color, 1, 3, fp);
     }
-    fclose(fp);    
+    fclose(fp);
+
+    cv::cvtColor(window, window, cv::COLOR_BGR2RGB);
+    cv::imwrite("binary.png", window);
 }
