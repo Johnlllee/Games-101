@@ -1,22 +1,50 @@
 //
 // Created by goksu on 2/25/20.
 //
-
+#include <mutex>
+#include <thread>
 #include <fstream>
 #include "Scene.hpp"
 #include "Renderer.hpp"
 
+#define POOL 4
 
 inline float deg2rad(const float& deg) { return deg * M_PI / 180.0; }
 
 const float EPSILON = 0.00001;
 
+std::thread pools[POOL];
+std::mutex mut;
+int count = 0;
+std::vector<Vector3f> mpframebuffer;
+
+void task(const Scene& scene, const Vector3f& eye_pos, const Vector3f& dir, const int& m, const int& spp) {
+    mut.lock();
+    count++;
+    mut.unlock();
+    Vector3f color = scene.castRay(Ray(eye_pos, dir), 0);
+    mut.lock();
+    count--;
+    mpframebuffer[m] += color / spp;
+    mut.unlock();
+}
+
 // The main render function. This where we iterate over all pixels in the image,
 // generate primary rays and cast these rays into the scene. The content of the
 // framebuffer is saved to a file.
+int busy() {
+    int get;
+    mut.lock();
+    get = count;
+    mut.unlock();
+    return get;
+}
+
 void Renderer::Render(const Scene& scene)
 {
     std::vector<Vector3f> framebuffer(scene.width * scene.height);
+    mpframebuffer.resize(scene.width * scene.height);
+    // std::fill(busy, busy+POOL, false);
 
     float scale = tan(deg2rad(scene.fov * 0.5));
     float imageAspectRatio = scene.width / (float)scene.height;
@@ -24,7 +52,8 @@ void Renderer::Render(const Scene& scene)
     int m = 0;
 
     // change the spp value to change sample ammount
-    int spp = 16;
+    int spp = 8;
+    count = 0;
     std::cout << "SPP: " << spp << "\n";
     for (uint32_t j = 0; j < scene.height; ++j) {
         for (uint32_t i = 0; i < scene.width; ++i) {
@@ -35,13 +64,23 @@ void Renderer::Render(const Scene& scene)
 
             Vector3f dir = normalize(Vector3f(-x, y, 1));
             for (int k = 0; k < spp; k++){
-                framebuffer[m] += scene.castRay(Ray(eye_pos, dir), 0) / spp;  
+                // single thread:
+                // framebuffer[m] += scene.castRay(Ray(eye_pos, dir), 0) / spp;
+
+                // 4 threads pool detach:
+                while(busy() >= POOL) {}
+                auto t = std::thread(task, std::ref(scene), eye_pos, dir, m, spp);
+                t.detach();
             }
             m++;
         }
+        // wait for the frame end
+        while(busy() > 0) {}
         UpdateProgress(j / (float)scene.height);
     }
     UpdateProgress(1.f);
+
+    framebuffer.swap(mpframebuffer);
 
     // save framebuffer to file
     FILE* fp = fopen("binary.ppm", "wb");
@@ -53,5 +92,5 @@ void Renderer::Render(const Scene& scene)
         color[2] = (unsigned char)(255 * std::pow(clamp(0, 1, framebuffer[i].z), 0.6f));
         fwrite(color, 1, 3, fp);
     }
-    fclose(fp);    
+    fclose(fp);
 }
