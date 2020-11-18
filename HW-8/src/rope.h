@@ -18,6 +18,7 @@ public:
 
   void simulateVerlet(float delta_t, Vector2D gravity);
   void simulateEuler(float delta_t, Vector2D gravity);
+  void simulateSemiImplicitEuler(float delta_t, Vector2D gravity);
 
   vector<Mass *> masses;
   vector<Spring *> springs;
